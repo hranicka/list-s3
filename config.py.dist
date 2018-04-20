@@ -1,0 +1,5 @@
+# AWS account to list the S3 buckets and files in them
+aws_region_name = 'eu-central-1'
+aws_acck = ''
+aws_seck = ''
+s3_bname = ''
