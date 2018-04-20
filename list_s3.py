@@ -7,54 +7,55 @@ import config
 
 # execute
 def main():
-    get_s3(config.aws_acck, config.aws_seck, config.aws_region_name, config.s3_bname)
+    get_s3(config.aws_access_key, config.aws_secret_key, config.aws_region_name, config.s3_bucket_name)
 
 
 # retrieve metadata about all buckets
-def get_s3(aws_acck, aws_seck, aws_region_name, s3_bname):
+def get_s3(aws_access_key, aws_secret_key, aws_region_name, s3_bucket_name):
     session = boto3.session.Session()
 
-    sts_client = session.client(
+    boto_client = session.client(
         's3',
         region_name=aws_region_name,
-        aws_access_key_id=aws_acck,
-        aws_secret_access_key=aws_seck,
+        aws_access_key_id=aws_access_key,
+        aws_secret_access_key=aws_secret_key,
         aws_session_token=''
     )
 
-    get_s3_obj(sts_client, s3_bname, '')
+    get_s3_obj(boto_client, s3_bucket_name)
 
 
 # get object metadata from the bucket
-def get_s3_obj(sts_client, name, tok):
-    if len(tok) > 0:
-        b = sts_client.list_objects_v2(Bucket=name, FetchOwner=True, MaxKeys=1000, ContinuationToken=tok)
-    else:
-        b = sts_client.list_objects_v2(Bucket=name, FetchOwner=True, MaxKeys=1000)
+def get_s3_obj(boto_client, s3_bucket_name, continuation_token=''):
+    params = {'Bucket': s3_bucket_name, 'FetchOwner': True, 'MaxKeys': 1000}
+    if continuation_token:
+        params['ContinuationToken'] = continuation_token
+
+    bucket = boto_client.list_objects_v2(**params)
 
     # capture metadata about objects in bucket
-    if b.has_key('Contents'):
-        timest = '%Y-%m-%d %H:%M:%S'
+    if 'Contents' in bucket:
+        time_format = '%Y-%m-%d %H:%M:%S'
 
-        for z in b['Contents']:
+        for z in bucket['Contents']:
             size = str(z['Size'])
-            skey = str(z['Key'])
-            stor = z['StorageClass']
-            fmod = z['LastModified']
+            file = str(z['Key'])
+            storage_type = z['StorageClass']
+            last_modified = z['LastModified']
 
-            funix = int(time.mktime(fmod.timetuple()))
-            fitim = fmod.strftime(timest)
+            last_modified_unix = int(time.mktime(last_modified.timetuple()))
+            last_modified_date = last_modified.strftime(time_format)
 
             # write the results to a list
-            x = [name, skey, size, stor, fitim, funix]
-            y = ','.join(map(str, x))
+            row = [s3_bucket_name, file, size, storage_type, last_modified_date, last_modified_unix]
+            csv_line = ','.join(map(str, row))
 
-            print(y)
+            print(csv_line)
 
     # if there is a token, retrieve additional files by calling the script again
-    if b.has_key('NextContinuationToken'):
-        tok = b['NextContinuationToken']
-        get_s3_obj(sts_client, name, tok)
+    if 'NextContinuationToken' in bucket:
+        continuation_token = bucket['NextContinuationToken']
+        get_s3_obj(boto_client, s3_bucket_name, continuation_token)
 
 
 # execute
