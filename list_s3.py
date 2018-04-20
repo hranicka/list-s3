@@ -12,9 +12,6 @@ def main():
 
 # retrieve metadata about all buckets
 def get_s3(aws_acck, aws_seck, aws_region_name, s3_bname):
-    global resu
-    resu = []
-
     session = boto3.session.Session()
 
     sts_client = session.client(
@@ -52,7 +49,6 @@ def get_s3_obj(sts_client, name, tok):
             x = [name, skey, size, stor, fitim, funix]
             y = ','.join(map(str, x))
 
-            resu.append(y)
             print(y)
 
     # if there is a token, retrieve additional files by calling the script again
